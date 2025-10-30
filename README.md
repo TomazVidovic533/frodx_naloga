@@ -209,6 +209,7 @@ GRAFANA_PORT=3000
 
 Dashboard se osvežuje z minimalnim zamikom.
 
+Quick Access -> http://localhost:3000/d/order-ingestion/order-ingestion-monitoring?orgId=1&from=now-15m&to=now&timezone=browser&refresh=5s
 
 ### Worker Metrike
 
