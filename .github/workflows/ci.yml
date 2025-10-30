@@ -1,0 +1,82 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '9.0.x'
+
+    - name: Restore dependencies
+      run: dotnet restore
+
+    - name: Build
+      run: dotnet build --no-restore --configuration Release
+
+    - name: Run tests
+      run: dotnet test --no-build --configuration Release --verbosity normal
+
+  build-and-push-images:
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    if: github.event_name == 'push'
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Log in to GitHub Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Extract metadata for MockAPI
+      id: meta-mockapi
+      uses: docker/metadata-action@v5
+      with:
+        images: ghcr.io/${{ github.repository }}/mockapi
+        tags: |
+          type=ref,event=branch
+          type=sha
+
+    - name: Build and push MockAPI
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./src/OrderIngestion.MockApi/Dockerfile
+        push: true
+        tags: ${{ steps.meta-mockapi.outputs.tags }}
+        labels: ${{ steps.meta-mockapi.outputs.labels }}
+
+    - name: Extract metadata for Worker
+      id: meta-worker
+      uses: docker/metadata-action@v5
+      with:
+        images: ghcr.io/${{ github.repository }}/worker
+        tags: |
+          type=ref,event=branch
+          type=sha
+
+    - name: Build and push Worker
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./src/OrderIngestion.Worker/Dockerfile
+        push: true
+        tags: ${{ steps.meta-worker.outputs.tags }}
+        labels: ${{ steps.meta-worker.outputs.labels }}

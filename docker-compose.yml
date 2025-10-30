@@ -1,0 +1,111 @@
+services:
+  mssql:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: mssql_db
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=${MSSQL_SA_PASSWORD}
+      - MSSQL_PID=Developer
+    ports:
+      - "${MSSQL_PORT}:1433"
+    volumes:
+      - mssql-data:/var/opt/mssql
+    healthcheck:
+      test: /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P ${MSSQL_SA_PASSWORD} -C -Q "SELECT 1" || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - frodx_naloga
+
+  mockapi:
+    build:
+      context: .
+      dockerfile: src/OrderIngestion.MockApi/Dockerfile
+    container_name: mock_api
+    environment:
+      - ASPNETCORE_URLS=http://+:8080
+      - ASPNETCORE_HTTP_PORTS=
+      - MockApi__EnableRandomErrors=${MOCK_API_ENABLE_ERRORS}
+      - MockApi__ErrorRate=${MOCK_API_ERROR_RATE}
+      - MockApi__MinDelayMs=${MOCK_API_MIN_DELAY_MS}
+      - MockApi__MaxDelayMs=${MOCK_API_MAX_DELAY_MS}
+    ports:
+      - "${MOCK_API_PORT}:8080"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - frodx_naloga
+
+  worker:
+    build:
+      context: .
+      dockerfile: src/OrderIngestion.Worker/Dockerfile
+    container_name: ingestion_worker
+    environment:
+      - ConnectionStrings__OrderDb=Server=mssql,1433;Database=${MSSQL_DATABASE};User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True;
+      - ApiSettings__BaseUrl=${WORKER_API_BASE_URL}
+      - IngestionIntervalSeconds=${WORKER_INGESTION_INTERVAL_SECONDS}
+      - RetryPolicy__RetryCount=${WORKER_RETRY_COUNT}
+      - Logging__Path=${WORKER_LOG_PATH}
+      - Ingestion__DownloadPath=${WORKER_DOWNLOAD_PATH}
+      - ASPNETCORE_URLS=http://+:8081
+      - Serilog__MinimumLevel__Override__Microsoft.EntityFrameworkCore.Database.Command=Fatal
+      - Serilog__MinimumLevel__Override__Microsoft.EntityFrameworkCore=Warning
+    ports:
+      - "${WORKER_METRICS_PORT}:8081"
+    depends_on:
+      mssql:
+        condition: service_healthy
+      mockapi:
+        condition: service_healthy
+    volumes:
+      - ./logs:/app/logs
+      - ./downloads:/tmp/order-ingestion/downloads
+    networks:
+      - frodx_naloga
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    ports:
+      - "${PROMETHEUS_PORT}:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    networks:
+      - frodx_naloga
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "${GRAFANA_PORT}:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    networks:
+      - frodx_naloga
+    restart: unless-stopped
+
+networks:
+  frodx_naloga:
+    driver: bridge
+    name: frodx_naloga
+
+volumes:
+  mssql-data:
+    name: frodx_mssql_data
+  grafana-data:
+    name: frodx_grafana_data
