@@ -107,7 +107,7 @@ Grafana se lahko testiral na http://localhost:3000/login (admin/admin), klikni "
 
 ## CI/CD Test
 
-Dodal sem en mini PR, da se vidi ko se prozi. Popravil sem README, samo da se zagrabi flow
+Dodal sem en mini PR, da se vidi ko se prozi. Popravil sem README, samo da se zagrabi flow. En flow sem mergal in bi je blo dodano pod packages.
 
 ## Opomba
 
