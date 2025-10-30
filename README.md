@@ -105,6 +105,10 @@ Grafano sem uproabil kot alternativo App Insights. Z njo sem delal pred tem in j
 
 Grafana se lahko testiral na http://localhost:3000/login (admin/admin), klikni "Skip", ker je default geslo, potem pa pod dsahboards. Sem dodal screenshote. To prikazuje isto kot logi v workerju. Zajema latest cifro, vidi pa se tudi after some time. Duplikati so tisti, ki so se spet v range-u MIN in MAX ponovno generirali in poslali. Sicer tukaj je tudi moznost, da se to vseeno shrani kot raw data v storage in nad tem naredi trasnformaciaj z SQL ali dbt (nism se se delal), da se posodablja v neki final view za druge potrebe. Kot neke vrste ELT ali pa ETL, odvisno od use case-a.
 
+## CI/CD Test
+
+Dodal sem en mini PR, da se vidi ko se prozi. Popravil sem README, samo da se zagrabi flow
+
 ## Opomba
 
 Naceloma bi uproabil Azure, ampak glede na to, da je bil incident na Microsoftu se kar stvari niso odpirale :)
@@ -159,7 +163,7 @@ Storitve bodo dostopne na:
 
 ## Konfiguracija
 
-### Okoljske Spremenljivke (.env)
+### ENV config
 
 #### MSSQL Nastavitve
 ```bash
@@ -192,7 +196,6 @@ WORKER_METRICS_PORT=8081                            # Potrebno za promethues, da
 PROMETHEUS_PORT=9090              
 GRAFANA_PORT=3000                  
 ```
-
 
 ## Monitoring
 
@@ -242,3 +245,4 @@ frodx_naloga/
 ├── Makefile                         
 └── .env                             
 ```
+
