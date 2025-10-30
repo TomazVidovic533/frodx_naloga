@@ -193,7 +193,6 @@ PROMETHEUS_PORT=9090
 GRAFANA_PORT=3000                  
 ```
 
-
 ## Monitoring
 
 ### Grafana Dashboards
